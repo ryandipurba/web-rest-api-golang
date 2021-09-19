@@ -60,12 +60,14 @@ func (b *bookUsecase) Update(data transport.UpdateBook) transport.GeneralRespons
 		Creator: data.Creator,
 	}
 
+	// fmt.Println(result)
 	if !b.br.Update(createPayload) {
 		return transport.GeneralResponse{
 			Message: "Id Not Found",
 		}
 	}
-	// update data in repository
+	b.br.Update(createPayload)
+
 	return transport.GeneralResponse{
 		Message: "Succes",
 	}
@@ -73,14 +75,13 @@ func (b *bookUsecase) Update(data transport.UpdateBook) transport.GeneralRespons
 
 func (b *bookUsecase) Delete(id string) transport.GeneralResponse {
 	// delete data in repostiory
-	// if !b.br.Delete(id) {
-	// 	return transport.GeneralResponse{
-	// 		Message: "Id Not Found",
-	// 	}
-	// }
+	if !b.br.Delete(id) {
+		return transport.GeneralResponse{
+			Message: "Id Not Found",
+		}
+	}
 
 	b.br.Delete(id)
-
 	return transport.GeneralResponse{
 		Message: "Succes",
 	}

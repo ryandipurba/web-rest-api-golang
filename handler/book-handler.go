@@ -65,6 +65,8 @@ func (b *bookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
 	var requestBook transport.UpdateBook
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(reqBody, &requestBook)
+	requestBook.Id = id
+	// fmt.Println(requestBook.Id)
 	// validation
 	err := validate.Struct(requestBook)
 	message := &transport.GeneralResponse{

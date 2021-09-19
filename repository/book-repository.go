@@ -34,13 +34,11 @@ func (b *bookRepository) Delete(id string) bool {
 	for i, key := range b.book {
 		if key.Id == id {
 			b.book = append(b.book[:i], b.book[i+1:]...)
+			return true
 		}
-		// else {
-		// 	return false
-		// }
 	}
 	// delete data in book list
-	return true
+	return false
 }
 
 func (b *bookRepository) Update(payload entity.Book) bool {
@@ -53,14 +51,11 @@ func (b *bookRepository) Update(payload entity.Book) bool {
 			if payload.Creator != "" {
 				new.Creator = payload.Creator
 			}
-		} else {
-			return false
+			return true
 		}
 	}
-	// find data book in list
-	// update data
-	// update list
-	return true
+
+	return false
 }
 
 func (b *bookRepository) GetBook(id string) entity.Book {
