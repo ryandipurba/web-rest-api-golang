@@ -5,40 +5,73 @@ import (
 )
 
 type BookRepository interface {
-	AddBook(payload entity.Book) bool
 	GetList() []entity.Book
+	Add(payload entity.Book) bool
+	Delete(id string) bool
+	Update(payload entity.Book) bool
+	GetBook(id string) entity.Book
 }
 
 type bookRepository struct {
+	// book list
 	book []entity.Book
 }
 
-func NewBajuRepository() BookRepository {
+func NewBookRepository() BookRepository {
 	return &bookRepository{}
 }
 
-func (b *bookRepository) AddBook(payload entity.Book) bool {
+func (b *bookRepository) GetList() []entity.Book {
+	return b.book
+}
+
+func (b *bookRepository) Add(payload entity.Book) bool {
 	b.book = append(b.book, payload)
 	return true
 }
 
-func (b *bookRepository) GetList() []entity.Book {
-	b.book = []entity.Book{
-		{
-			Id:      1,
-			Name:    "Study go",
-			Creator: "ryan",
-		},
-		{
-			Id:      2,
-			Name:    "Study js",
-			Creator: "anto",
-		},
-		{
-			Id:      3,
-			Name:    "Study html",
-			Creator: "jaka",
-		},
+func (b *bookRepository) Delete(id string) bool {
+	for i, key := range b.book {
+		if key.Id == id {
+			b.book = append(b.book[:i], b.book[i+1:]...)
+		}
+		// else {
+		// 	return false
+		// }
 	}
-	return b.book
+	// delete data in book list
+	return true
+}
+
+func (b *bookRepository) Update(payload entity.Book) bool {
+	for i, key := range b.book {
+		if key.Id == payload.Id {
+			new := &b.book[i]
+			if payload.Name != "" {
+				new.Name = payload.Name
+			}
+			if payload.Creator != "" {
+				new.Creator = payload.Creator
+			}
+		} else {
+			return false
+		}
+	}
+	// find data book in list
+	// update data
+	// update list
+	return true
+}
+
+func (b *bookRepository) GetBook(id string) entity.Book {
+	var data entity.Book
+	for _, key := range b.book {
+		if key.Id == id {
+			data = key
+		}
+	}
+	// find data book in list
+	// update data
+	// update list
+	return data
 }

@@ -1,7 +1,7 @@
 package entity
 
 type Book struct {
-	Id      int
+	Id      string
 	Name    string
 	Creator string
 }

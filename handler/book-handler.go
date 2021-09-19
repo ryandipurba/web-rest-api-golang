@@ -1,44 +1,99 @@
 package handler
 
 import (
-	"book-catalog/entity"
+	"book-catalog/transport"
 	"book-catalog/usecase"
+	"book-catalog/validation"
 	"encoding/json"
-	"log"
+	"fmt"
+	"io/ioutil"
 	"net/http"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 )
 
-type BookHandler interface {
-	AddBook(w http.ResponseWriter, r *http.Request)
-	GetList(w http.ResponseWriter, r *http.Request)
-}
 type bookHandler struct {
 	bu usecase.BookUsecase
 }
 
-func NewBooHandler(bu usecase.BookUsecase) BookHandler {
+func NewBookHandler(bu usecase.BookUsecase) *bookHandler {
 	return &bookHandler{
 		bu: bu,
 	}
 }
 
-func (b *bookHandler) GetList(w http.ResponseWriter, _ *http.Request) {
-	object := b.bu.GetList()
-	json.NewEncoder(w).Encode(object)
+// get list book
+func (b *bookHandler) GetList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	posts := b.bu.GetList()
+	json.NewEncoder(w).Encode(posts)
 }
 
-func (b *bookHandler) AddBook(w http.ResponseWriter, r *http.Request) {
+// Add new book
+func (b *bookHandler) Add(w http.ResponseWriter, r *http.Request) {
+	validate := validator.New()
 	w.Header().Set("Content-Type", "application/json")
-	if r.Method == "POST" {
-		decoder := json.NewDecoder(r.Body)
-		var t entity.Book
-		err := decoder.Decode(&t)
-		if err != nil {
-			panic(err)
+	var requestBook transport.CreateBook
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(reqBody, &requestBook)
+	// validation
+	err := validate.Struct(requestBook)
+	// message := &transport.GeneralResponse{
+	// 	Message: "Field must be required",
+	// }
+	if err != nil {
+		errors := validation.FormatValidationError(err)
+		fmt.Printf("error: %+v", errors)
+		dataResponse := transport.ValidateResponse{
+			Message: errors,
+			Status:  http.StatusBadRequest,
 		}
-		b.bu.AddBook(t.Id, t.Name, t.Creator)
-		object := b.bu.GetList()
-		log.Println(object)
-		json.NewEncoder(w).Encode(t)
+		json.NewEncoder(w).Encode(dataResponse)
+		return
 	}
+	add := b.bu.Add(requestBook)
+	json.NewEncoder(w).Encode(add)
+}
+
+// update book
+func (b *bookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	validate := validator.New()
+	params := mux.Vars(r)
+	id := params["bookID"]
+	var requestBook transport.UpdateBook
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(reqBody, &requestBook)
+	// validation
+	err := validate.Struct(requestBook)
+	message := &transport.GeneralResponse{
+		Message: "Field must be required",
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(message)
+		return
+	}
+	requestBook.Id = id
+	update := b.bu.Update(requestBook)
+	json.NewEncoder(w).Encode(update)
+}
+
+// delete book
+func (b *bookHandler) DeleteBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	id := params["bookID"]
+	deleteBook := b.bu.Delete(id)
+	json.NewEncoder(w).Encode(deleteBook)
+}
+
+// get book
+func (b *bookHandler) GetBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	id := params["bookID"]
+	getBook := b.bu.GetBook(id)
+	json.NewEncoder(w).Encode(getBook)
 }
