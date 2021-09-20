@@ -18,50 +18,10 @@ func main() {
 
 	r := mux.NewRouter()
 
-	/**
-	method : GET
-	request: name
-	response : {
-		count : number
-		listBook : {
-			id : "xxx" -> format uuid
-			name : "new book"
-			creator: "vani"
-		}
-	}
-
-	*/
 	r.HandleFunc("/books", bookHandler.GetList).Methods("GET")
 	r.HandleFunc("/books/{bookID}", bookHandler.GetBook).Methods("GET")
-	/**
-	method : POST
-	request: {
-		name: "new book", -> required
-		creator: "ryand", ->required
-	}
-	response : {
-		message : "berhasil"
-	}
-	*/
-	r.HandleFunc("/books", bookHandler.Add).Methods("POST")
-	/**
-	method : PATCH
-	request: {
-		bookID: "xxx", -> required
-		name: "new book",-> optional
-		creator: "ryand",-> optional
-	}
-	response : {
-		message : "berhasil"
-	}
-	*/
+	r.HandleFunc("/books", bookHandler.AddBook).Methods("POST")
 	r.HandleFunc("/books/{bookID}", bookHandler.UpdateBook).Methods("PATCH")
-	/**
-	method : Delete
-	response : {
-		message : "berhasil"
-	}
-	*/
 	r.HandleFunc("/books/{bookID}", bookHandler.DeleteBook).Methods("DELETE")
 
 	fmt.Println("Start listening")

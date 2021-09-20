@@ -46,6 +46,7 @@ func (b *bookUsecase) Add(data transport.CreateBook) transport.GeneralResponse {
 
 	// save data to repostory
 	// make response
+	// semua yang ada kondisi harus di cek
 	b.br.Add(createPayload)
 	return transport.GeneralResponse{
 		Message: "berhasil",
@@ -60,14 +61,12 @@ func (b *bookUsecase) Update(data transport.UpdateBook) transport.GeneralRespons
 		Creator: data.Creator,
 	}
 
-	// fmt.Println(result)
-	if !b.br.Update(createPayload) {
+	update := b.br.Update(createPayload)
+	if !update {
 		return transport.GeneralResponse{
 			Message: "Id Not Found",
 		}
 	}
-	b.br.Update(createPayload)
-
 	return transport.GeneralResponse{
 		Message: "Succes",
 	}
@@ -75,13 +74,13 @@ func (b *bookUsecase) Update(data transport.UpdateBook) transport.GeneralRespons
 
 func (b *bookUsecase) Delete(id string) transport.GeneralResponse {
 	// delete data in repostiory
-	if !b.br.Delete(id) {
+	delete := b.br.Delete(id)
+	if !delete {
 		return transport.GeneralResponse{
 			Message: "Id Not Found",
 		}
 	}
 
-	b.br.Delete(id)
 	return transport.GeneralResponse{
 		Message: "Succes",
 	}
@@ -89,6 +88,7 @@ func (b *bookUsecase) Delete(id string) transport.GeneralResponse {
 
 func (b *bookUsecase) GetBook(id string) transport.GetBook {
 	// delete data in repostiory
+	// cek data nya kosong
 	data := b.br.GetBook(id)
 	return transport.GetBook{
 		Data: data,

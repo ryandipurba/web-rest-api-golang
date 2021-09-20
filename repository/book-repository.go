@@ -2,6 +2,7 @@ package repository
 
 import (
 	"book-catalog/entity"
+	"fmt"
 )
 
 type BookRepository interface {
@@ -30,6 +31,7 @@ func (b *bookRepository) Add(payload entity.Book) bool {
 	return true
 }
 
+// perulangan cuma untuk mencari index
 func (b *bookRepository) Delete(id string) bool {
 	for i, key := range b.book {
 		if key.Id == id {
@@ -40,9 +42,10 @@ func (b *bookRepository) Delete(id string) bool {
 	// delete data in book list
 	return false
 }
-
 func (b *bookRepository) Update(payload entity.Book) bool {
+	// perulangan masih 2 kali
 	for i, key := range b.book {
+		fmt.Printf("perulangan %d \n", i+1)
 		if key.Id == payload.Id {
 			new := &b.book[i]
 			if payload.Name != "" {
@@ -54,7 +57,6 @@ func (b *bookRepository) Update(payload entity.Book) bool {
 			return true
 		}
 	}
-
 	return false
 }
 

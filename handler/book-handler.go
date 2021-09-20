@@ -5,7 +5,6 @@ import (
 	"book-catalog/usecase"
 	"book-catalog/validation"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -31,20 +30,16 @@ func (b *bookHandler) GetList(w http.ResponseWriter, r *http.Request) {
 }
 
 // Add new book
-func (b *bookHandler) Add(w http.ResponseWriter, r *http.Request) {
+func (b *bookHandler) AddBook(w http.ResponseWriter, r *http.Request) {
 	validate := validator.New()
 	w.Header().Set("Content-Type", "application/json")
 	var requestBook transport.CreateBook
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(reqBody, &requestBook)
+	json.Unmarshal(reqBody, &requestBook) //memasukan isi request body ke transport
 	// validation
 	err := validate.Struct(requestBook)
-	// message := &transport.GeneralResponse{
-	// 	Message: "Field must be required",
-	// }
 	if err != nil {
 		errors := validation.FormatValidationError(err)
-		fmt.Printf("error: %+v", errors)
 		dataResponse := transport.ValidateResponse{
 			Message: errors,
 			Status:  http.StatusBadRequest,
@@ -59,6 +54,7 @@ func (b *bookHandler) Add(w http.ResponseWriter, r *http.Request) {
 // update book
 func (b *bookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	// validator buat global
 	validate := validator.New()
 	params := mux.Vars(r)
 	id := params["bookID"]
@@ -66,7 +62,6 @@ func (b *bookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(reqBody, &requestBook)
 	requestBook.Id = id
-	// fmt.Println(requestBook.Id)
 	// validation
 	err := validate.Struct(requestBook)
 	message := &transport.GeneralResponse{
