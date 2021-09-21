@@ -2,73 +2,75 @@ package repository
 
 import (
 	"book-catalog/entity"
-	"fmt"
+	"database/sql"
 )
 
 type BookRepository interface {
-	GetList() []entity.Book
-	Add(payload entity.Book) bool
-	Delete(id string) bool
-	Update(payload entity.Book) bool
-	GetBook(id string) entity.Book
+	GetList() ([]entity.Book, error)
+	Add(payload entity.Book) error
+	Delete(id string) error
+	Update(payload entity.Book) error
+	GetBook(id string) (*entity.Book, error)
 }
 
 type bookRepository struct {
-	// book list
-	book []entity.Book
+	DB *sql.DB
 }
 
-func NewBookRepository() BookRepository {
-	return &bookRepository{}
-}
-
-func (b *bookRepository) GetList() []entity.Book {
-	return b.book
-}
-
-func (b *bookRepository) Add(payload entity.Book) bool {
-	b.book = append(b.book, payload)
-	return true
-}
-
-// perulangan cuma untuk mencari index
-func (b *bookRepository) Delete(id string) bool {
-	for i, key := range b.book {
-		if key.Id == id {
-			b.book = append(b.book[:i], b.book[i+1:]...)
-			return true
-		}
+func NewBookRepository(db *sql.DB) BookRepository {
+	return &bookRepository{
+		DB: db,
 	}
-	// delete data in book list
-	return false
-}
-func (b *bookRepository) Update(payload entity.Book) bool {
-	// perulangan masih 2 kali
-	for i, key := range b.book {
-		fmt.Printf("perulangan %d \n", i+1)
-		if key.Id == payload.Id {
-			new := &b.book[i]
-			if payload.Name != "" {
-				new.Name = payload.Name
-			}
-			if payload.Creator != "" {
-				new.Creator = payload.Creator
-			}
-			return true
-		}
-	}
-	return false
 }
 
-func (b *bookRepository) GetBook(id string) entity.Book {
-	var data entity.Book
-	for _, key := range b.book {
-		if key.Id == id {
-			data = key
-		}
+func (b *bookRepository) GetList() ([]entity.Book, error) {
+
+	rows, err := b.DB.Query("select * from tb_books")
+	if err != nil {
+		return nil, err
 	}
-	// find data book in list
-	// update data
-	// update list
-	return data
+	var books []entity.Book
+	for rows.Next() {
+		var res entity.Book
+		_ = rows.Scan(&res.Id, &res.Name, &res.Creator)
+		books = append(books, res)
+	}
+	return books, nil
+}
+
+func (b *bookRepository) Add(payload entity.Book) error {
+	_, err := b.DB.Exec("INSERT INTO tb_books (id, name, creator) VALUES (?, ?, ?)", payload.Id, payload.Name, payload.Creator)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *bookRepository) Delete(id string) error {
+	_, err := b.DB.Exec("DELETE FROM tb_books WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *bookRepository) Update(payload entity.Book) error {
+	_, err := b.DB.Exec("UPDATE tb_books SET name = ?, creator = ? WHERE id = ?", payload.Name, payload.Creator, payload.Id)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *bookRepository) GetBook(id string) (*entity.Book, error) {
+	sqlStatement := "SELECT * FROM tb_books WHERE id = ?"
+	row := b.DB.QueryRow(sqlStatement, id)
+	var book entity.Book
+	err := row.Scan(&book.Id, &book.Name, &book.Creator)
+	if err != nil {
+		return nil, err
+	}
+	return &book, nil
+
 }

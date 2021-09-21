@@ -3,9 +3,7 @@ package handler
 import (
 	"book-catalog/transport"
 	"book-catalog/usecase"
-	"book-catalog/validation"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
@@ -13,67 +11,103 @@ import (
 )
 
 type bookHandler struct {
-	bu usecase.BookUsecase
+	bu        usecase.BookUsecase
+	validator *validator.Validate
 }
 
-func NewBookHandler(bu usecase.BookUsecase) *bookHandler {
+func NewBookHandler(bu usecase.BookUsecase, validator *validator.Validate) *bookHandler {
 	return &bookHandler{
-		bu: bu,
+		bu:        bu,
+		validator: validator,
 	}
 }
 
 // get list book
 func (b *bookHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	posts := b.bu.GetList()
-	json.NewEncoder(w).Encode(posts)
+	result, err := b.bu.GetList()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 }
 
 // Add new book
 func (b *bookHandler) AddBook(w http.ResponseWriter, r *http.Request) {
-	validate := validator.New()
+
+	decoder := json.NewDecoder(r.Body)
 	w.Header().Set("Content-Type", "application/json")
 	var requestBook transport.CreateBook
-	reqBody, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(reqBody, &requestBook) //memasukan isi request body ke transport
-	// validation
-	err := validate.Struct(requestBook)
+	err := decoder.Decode(&requestBook)
 	if err != nil {
-		errors := validation.FormatValidationError(err)
-		dataResponse := transport.ValidateResponse{
-			Message: errors,
+		w.WriteHeader(http.StatusBadRequest)
+		responses := transport.ResponseError{
+			Message: "error cuk",
+			Status:  http.StatusBadRequest,
+		}
+		json.NewEncoder(w).Encode(responses)
+		return
+	}
+	// validation
+	errorValidation := b.validator.Struct(requestBook)
+	if errorValidation != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		dataResponse := transport.ResponseError{
+			Message: errorValidation.Error(),
 			Status:  http.StatusBadRequest,
 		}
 		json.NewEncoder(w).Encode(dataResponse)
 		return
 	}
-	add := b.bu.Add(requestBook)
+	add, responseError := b.bu.Add(requestBook)
+	if responseError != nil {
+		w.WriteHeader(responseError.Status)
+		json.NewEncoder(w).Encode(responseError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(add)
 }
 
-// update book
+// // update book
 func (b *bookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
 	w.Header().Set("Content-Type", "application/json")
-	// validator buat global
-	validate := validator.New()
 	params := mux.Vars(r)
 	id := params["bookID"]
 	var requestBook transport.UpdateBook
-	reqBody, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(reqBody, &requestBook)
-	requestBook.Id = id
-	// validation
-	err := validate.Struct(requestBook)
-	message := &transport.GeneralResponse{
-		Message: "Field must be required",
-	}
+	err := decoder.Decode(&requestBook)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(message)
+		responses := transport.ResponseError{
+			Message: "error cuk",
+			Status:  http.StatusBadRequest,
+		}
+		json.NewEncoder(w).Encode(responses)
 		return
 	}
 	requestBook.Id = id
-	update := b.bu.Update(requestBook)
+	// validation
+	errorValidation := b.validator.Struct(requestBook)
+	if errorValidation != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		dataResponse := transport.ResponseError{
+			Message: errorValidation.Error(),
+			Status:  http.StatusBadRequest,
+		}
+		json.NewEncoder(w).Encode(dataResponse)
+		return
+	}
+	update, responseError := b.bu.Update(requestBook)
+	if responseError != nil {
+		w.WriteHeader(responseError.Status)
+		json.NewEncoder(w).Encode(responseError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(update)
 }
 
@@ -82,15 +116,26 @@ func (b *bookHandler) DeleteBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["bookID"]
-	deleteBook := b.bu.Delete(id)
-	json.NewEncoder(w).Encode(deleteBook)
+	delete, err := b.bu.Delete(id)
+	if err != nil {
+		w.WriteHeader(err.Status)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(delete)
 }
 
-// get book
 func (b *bookHandler) GetBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	id := params["bookID"]
-	getBook := b.bu.GetBook(id)
-	json.NewEncoder(w).Encode(getBook)
+	result, err := b.bu.GetBook(id)
+	if err != nil {
+		w.WriteHeader(err.Status)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 }

@@ -4,17 +4,19 @@ import (
 	"book-catalog/entity"
 	"book-catalog/repository"
 	"book-catalog/transport"
+	"database/sql"
 	"encoding/hex"
+	"net/http"
 
 	uuid "github.com/satori/go.uuid"
 )
 
 type BookUsecase interface {
-	GetList() transport.GetList
-	Add(data transport.CreateBook) transport.GeneralResponse
-	Update(data transport.UpdateBook) transport.GeneralResponse
-	Delete(id string) transport.GeneralResponse
-	GetBook(id string) transport.GetBook
+	GetList() (*transport.GetList, *transport.ResponseError)
+	Add(data transport.CreateBook) (*transport.GeneralResponse, *transport.ResponseError)
+	Update(data transport.UpdateBook) (*transport.GeneralResponse, *transport.ResponseError)
+	Delete(id string) (*transport.GeneralResponse, *transport.ResponseError)
+	GetBook(id string) (*transport.GetBookResponse, *transport.ResponseError)
 }
 type bookUsecase struct {
 	br repository.BookRepository
@@ -26,15 +28,22 @@ func NewBookUsecase(br repository.BookRepository) BookUsecase {
 	}
 }
 
-func (b *bookUsecase) GetList() transport.GetList {
-	data := b.br.GetList()
-	return transport.GetList{
-		Count:    len(data),
-		ListBook: data,
+func (b *bookUsecase) GetList() (*transport.GetList, *transport.ResponseError) {
+	result, err := b.br.GetList()
+	if err != nil {
+		response := &transport.ResponseError{
+			Message: "Un Processable Entity",
+			Status:  http.StatusUnprocessableEntity,
+		}
+		return nil, response
 	}
+	return &transport.GetList{
+		Count:    len(result),
+		ListBook: result,
+	}, nil
 }
 
-func (b *bookUsecase) Add(data transport.CreateBook) transport.GeneralResponse {
+func (b *bookUsecase) Add(data transport.CreateBook) (*transport.GeneralResponse, *transport.ResponseError) {
 	// generate id: uuid
 	id := uuid.NewV4()
 	myuuid := hex.EncodeToString(id[:])
@@ -44,53 +53,101 @@ func (b *bookUsecase) Add(data transport.CreateBook) transport.GeneralResponse {
 		Creator: data.Creator,
 	}
 
-	// save data to repostory
-	// make response
-	// semua yang ada kondisi harus di cek
-	b.br.Add(createPayload)
-	return transport.GeneralResponse{
-		Message: "berhasil",
+	err := b.br.Add(createPayload)
+	if err != nil {
+		response := &transport.ResponseError{
+			Message: "Un Processable Entity",
+			Status:  http.StatusUnprocessableEntity,
+		}
+		return nil, response
 	}
+
+	succes := &transport.GeneralResponse{
+		Message: "succes",
+	}
+	return succes, nil
 }
 
-func (b *bookUsecase) Update(data transport.UpdateBook) transport.GeneralResponse {
+// update
+func (b *bookUsecase) Update(data transport.UpdateBook) (*transport.GeneralResponse, *transport.ResponseError) {
 	// make payload
+
+	result, errBook := b.br.GetBook(data.Id)
+	if errBook != nil {
+		responseError := &transport.ResponseError{
+			Message: "Not Found 404",
+			Status:  http.StatusNotFound,
+		}
+		return nil, responseError
+	}
+
+	if data.Name == "" {
+		data.Name = result.Name
+	}
+	if data.Creator == "" {
+		data.Creator = result.Creator
+	}
+
 	createPayload := entity.Book{
 		Id:      data.Id,
 		Name:    data.Name,
 		Creator: data.Creator,
 	}
 
-	update := b.br.Update(createPayload)
-	if !update {
-		return transport.GeneralResponse{
-			Message: "Id Not Found",
+	err := b.br.Update(createPayload)
+	if err != nil {
+		response := &transport.ResponseError{
+			Message: "Un Processable Entity",
+			Status:  http.StatusUnprocessableEntity,
 		}
+		return nil, response
 	}
-	return transport.GeneralResponse{
-		Message: "Succes",
+	
+	succes := &transport.GeneralResponse{
+		Message: "succes",
 	}
+	return succes, nil
+
 }
 
-func (b *bookUsecase) Delete(id string) transport.GeneralResponse {
-	// delete data in repostiory
-	delete := b.br.Delete(id)
-	if !delete {
-		return transport.GeneralResponse{
-			Message: "Id Not Found",
+func (b *bookUsecase) Delete(id string) (*transport.GeneralResponse, *transport.ResponseError) {
+	// find book id
+	_, errBook := b.br.GetBook(id)
+	if errBook != nil {
+		responseError := &transport.ResponseError{
+			Message: "Not Found 404",
+			Status:  http.StatusNotFound,
+		}
+		return nil, responseError
+	}
+
+	err := b.br.Delete(id)
+	if err != nil {
+		responseError := &transport.ResponseError{
+			Message: err.Error(),
+			Status:  http.StatusNotFound,
+		}
+		return nil, responseError
+	}
+
+	return &transport.GeneralResponse{
+		Message: "Delete Succes",
+	}, nil
+}
+
+func (b *bookUsecase) GetBook(id string) (*transport.GetBookResponse, *transport.ResponseError) {
+	result, err := b.br.GetBook(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			responseError := &transport.ResponseError{
+				Message: "Not Found 404",
+				Status:  http.StatusNotFound,
+			}
+			return nil, responseError
 		}
 	}
 
-	return transport.GeneralResponse{
-		Message: "Succes",
-	}
-}
-
-func (b *bookUsecase) GetBook(id string) transport.GetBook {
-	// delete data in repostiory
-	// cek data nya kosong
-	data := b.br.GetBook(id)
-	return transport.GetBook{
-		Data: data,
-	}
+	return &transport.GetBookResponse{
+		Data: *result,
+	}, nil
 }

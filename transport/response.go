@@ -1,6 +1,8 @@
 package transport
 
-import "book-catalog/entity"
+import (
+	"book-catalog/entity"
+)
 
 type GeneralResponse struct {
 	Message string `json:"message"`
@@ -11,11 +13,11 @@ type GetList struct {
 	ListBook []entity.Book `json: "listBook"`
 }
 
-type GetBook struct {
+type GetBookResponse struct {
 	Data entity.Book `json: "data"`
 }
 
-type ValidateResponse struct {
-	Message []string
+type ResponseError struct {
+	Message string
 	Status  int
 }

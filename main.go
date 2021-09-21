@@ -1,29 +1,21 @@
 package main
 
 import (
-	"book-catalog/handler"
-	"book-catalog/repository"
-	"book-catalog/usecase"
-	"fmt"
+	"book-catalog/config"
+	"book-catalog/server"
 
-	"net/http"
-
-	"github.com/gorilla/mux"
+	"github.com/go-playground/validator/v10"
 )
 
 func main() {
-	repo := repository.NewBookRepository()
-	uCase := usecase.NewBookUsecase(repo)
-	bookHandler := handler.NewBookHandler(uCase)
+	validation := validator.New()
+	cfg := config.LoadConfig()       //ngeload env
+	dbInit, err := config.MySQL(cfg) //konek ke database dengan paramaeter yang ada di env
+	if err != nil {
+		panic(err)
+	}
 
-	r := mux.NewRouter()
+	server := server.NewServer(dbInit, validation) // memanggil koneksi
 
-	r.HandleFunc("/books", bookHandler.GetList).Methods("GET")
-	r.HandleFunc("/books/{bookID}", bookHandler.GetBook).Methods("GET")
-	r.HandleFunc("/books", bookHandler.AddBook).Methods("POST")
-	r.HandleFunc("/books/{bookID}", bookHandler.UpdateBook).Methods("PATCH")
-	r.HandleFunc("/books/{bookID}", bookHandler.DeleteBook).Methods("DELETE")
-
-	fmt.Println("Start listening")
-	fmt.Println(http.ListenAndServe(":8080", r))
+	server.ListenAndServer("8080")
 }
